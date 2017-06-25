@@ -40,8 +40,8 @@ impl NormalizedContinuedFraction {
     fn value(self) -> f32 {
         match self {
             Whole(w) => w as f32,
-            Fraction(f) => 1/(*f).value(),
-            Continuation(w, f) => (w as f32) + 1/(*f).value(),
+            Fraction(f) => 1.0/(*f).value(),
+            Continuation(w, f) => (w as f32) + 1.0/(*f).value(),
         }
     }
 }
