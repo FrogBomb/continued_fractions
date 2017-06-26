@@ -89,7 +89,7 @@ impl ContinuedFraction {
        use self::ContinuedFraction::*;
        match self {
            Normalized(ncf) => ncf,
-           ref cf => {
+           cf => {
                let (num, denom) = cf.as_rational();
                NormalizedContinuedFraction::new(num, denom)
            }
