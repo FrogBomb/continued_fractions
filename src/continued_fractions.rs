@@ -1,5 +1,4 @@
 use std::ops;
-use std::iter::Iterator;
 
 pub enum NormalizedContinuedFraction {
     Whole(u64),
@@ -7,8 +6,8 @@ pub enum NormalizedContinuedFraction {
 }
 
 pub enum ContinuedFraction {
-    Continuation(u64, u64, Box<ContinuedFraction>), //Continuation(w, n, d) -> w + n/d
     Normalized(NormalizedContinuedFraction),
+    Continuation(u64, u64, Box<ContinuedFraction>), //Continuation(w, n, d) -> w + n/d
 }
 
 impl NormalizedContinuedFraction {
@@ -31,8 +30,8 @@ impl NormalizedContinuedFraction {
    pub fn fractional_part(self) -> NormalizedContinuedFraction {
         use self::NormalizedContinuedFraction::*;
         match self {
-            Whole(w) => Whole(0),
-            Continuation(w, f) => Continuation(0, f),
+            Whole(_) => Whole(0),
+            Continuation(_, f) => Continuation(0, f),
         }
     }
 
@@ -117,38 +116,30 @@ impl ContinuedFraction {
     }
 }
 
+impl ops::Add<u64> for NormalizedContinuedFraction {
+    type Output = NormalizedContinuedFraction;
 
-// impl ops::Add<u64> for ContinuedFraction {
-//     type Output = ContinuedFraction;
-//
-//    pub fn add(self, other: u64) -> ContinuedFraction {
-//         if(other == 0) { self } else {
-//             match self {
-//                 Whole(w) => Whole(w + other),
-//                 NormalizedFraction(f) => Continuation(other, f),
-//                 Continuation(w, f) => Continuation(w + other, f),
-//             }
-//         }
-//     }
-// }
+    fn add(self, other: u64) -> NormalizedContinuedFraction {
+        use self::NormalizedContinuedFraction::*;
+        if other == 0 { self } else {
+            match self {
+                Whole(w) => Whole(w + other),
+                Continuation(w, f) => Continuation(w + other, f),
+            }
+        }
+    }
+}
 
-// impl ops::Mul<u64> for ContinuedFraction {
-//     type Output = ContinuedFraction;
-//
-//    pub fn mul(self, other: u64){
-//         match self {
-//             Whole(w) => Whole(w * other),
-//             NormalizedFraction(f) => Fraction(other, f),
-//             Fraction(n, d) => Fraction(n * other, f),
-//             Continuation(w, f) => Continuation(w * other, )
-//         }
-//     }
-// }
+impl ops::Add<u64> for ContinuedFraction {
+    type Output = ContinuedFraction;
 
-// impl ops::Add<ContinuedFraction> for u64 {
-//     type Output = ContinuedFraction;
-//
-//    pub fn add(self, other: ContinuedFraction) -> ContinuedFraction {
-//         other + self
-//     }
-// }
+    fn add(self, other: u64) -> ContinuedFraction {
+        use self::ContinuedFraction::*;
+        if other == 0 { self } else {
+            match self {
+                Normalized(ncf) => Normalized(ncf + other),
+                Continuation(w, n, d) => Continuation(w + other, n, d),
+            }
+        }
+    }
+}
