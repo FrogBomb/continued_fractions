@@ -13,15 +13,15 @@ pub enum ContinuedFraction {
 }
 
 impl NormalizedContinuedFraction {
-    fn new(num: u64, denom: u64) -> NormalizedContinuedFraction {
+   pub fn new(num: u64, denom: u64) -> NormalizedContinuedFraction {
         use self::NormalizedContinuedFraction::*;
         match (num/denom, num%denom) {
-            (w, 0) => Whole(w),
-            (w, rem) => Continuation(w, Box::new(NormalizedContinuedFraction::new(denom, rem))),
+            (quot, 0) => Whole(quot),
+            (quot, rem) => Continuation(quot, Box::new(NormalizedContinuedFraction::new(denom, rem))),
         }
     }
 
-    fn whole(self) -> NormalizedContinuedFraction {
+   pub fn whole(self) -> NormalizedContinuedFraction {
         use self::NormalizedContinuedFraction::*;
         match self {
             Whole(w) => Whole(w),
@@ -29,28 +29,29 @@ impl NormalizedContinuedFraction {
         }
     }
 
-    fn fractional_part(self) -> NormalizedContinuedFraction {
+   pub fn fractional_part(self) -> NormalizedContinuedFraction {
         use self::NormalizedContinuedFraction::*;
         match self {
             Whole(w) => Whole(0),
-            Continuation(w, f) => *f,
+            Continuation(w, f) => Continuation(0, f),
         }
     }
 
-    fn inverted(self) -> NormalizedContinuedFraction {
+   pub fn inverted(self) -> Option<NormalizedContinuedFraction> {
         use self::NormalizedContinuedFraction::*;
         match self {
-            Whole(w) => Continuation(0, Box::new(Whole(w))),
-            Continuation(0, f) => *f,
-            cf => Continuation(0, Box::new(cf)),
+            Whole(0) => None,
+            Whole(w) => Some(Continuation(0, Box::new(Whole(w)))),
+            Continuation(0, f) => Some(*f),
+            cf => Some(Continuation(0, Box::new(cf))),
         }
     }
 
-    fn normalized(self) -> NormalizedContinuedFraction {
+   pub fn normalized(self) -> NormalizedContinuedFraction {
         self
     }
 
-    fn value(self) -> f64 {
+   pub fn value(self) -> f64 {
         use self::NormalizedContinuedFraction::*;
         match self {
             Whole(w) => w as f64,
@@ -58,12 +59,64 @@ impl NormalizedContinuedFraction {
         }
     }
 
-    fn as_rational(self) -> (u64, u64) {
+   pub fn as_rational(self) -> (u64, u64) {
+        use self::NormalizedContinuedFraction::*;
         match self {
             Whole(w) => (w, 1),
             Continuation(w, f) => {
-                val (d, n) = (*f).as_rational(); // w + 1/(d/n) -> w + n/d -> (w*d + n) / d
+                let (d, n) = (*f).as_rational(); // w + 1/(d/n) -> w + n/d -> (w*d + n) / d
                 (w*d + n , d)
+            }
+        }
+    }
+}
+
+impl ContinuedFraction {
+   pub fn new(num: u64, denom: u64) -> ContinuedFraction {
+        use self::ContinuedFraction::*;
+        use self::NormalizedContinuedFraction as NCF;
+        match (num/denom, num%denom) {
+            (quot, 0) => Normalized(NCF::Whole(quot)),
+            (quot, 1) => Normalized(NCF::Continuation(quot, Box::new(NCF::Whole(denom)))),
+            (quot, rem) => Continuation(quot, rem, Box::new(Normalized(NCF::Whole(denom)))),
+        }
+    }
+
+   pub fn inverted(self) -> Option<ContinuedFraction> {
+        use self::ContinuedFraction::*;
+        match self {
+            Normalized(ncf) => ncf.inverted().map(|f| Normalized(f)),
+            Continuation(0, 1, f) => Some(*f),
+            cf => Some(Continuation(0, 1, Box::new(cf))),
+        }
+    }
+
+   pub fn normalized(self) -> ContinuedFraction {
+       use self::ContinuedFraction::*;
+       match self {
+           Normalized(ncf) => Normalized(ncf),
+           cf => {
+               let (num, denom) = cf.as_rational();
+               Normalized(NormalizedContinuedFraction::new(num, denom))
+           }
+       }
+    }
+
+   pub fn value(self) -> f64 {
+        use self::ContinuedFraction::*;
+        match self {
+            Normalized(ncf) => ncf.value(),
+            Continuation(w, m, f) => (w as f64) + (m as f64)/(*f).value(),
+        }
+    }
+
+   pub fn as_rational(self) -> (u64, u64) {
+        use self::ContinuedFraction::*;
+        match self {
+            Normalized(ncf) => ncf.as_rational(),
+            Continuation(w, m, f) => {
+                let (d, n) = (*f).as_rational(); // w + m/(d/n) -> w + m*n/d -> (w*d + m*n) / d
+                (w*d + m*n , d)
             }
         }
     }
@@ -73,7 +126,7 @@ impl NormalizedContinuedFraction {
 // impl ops::Add<u64> for ContinuedFraction {
 //     type Output = ContinuedFraction;
 //
-//     fn add(self, other: u64) -> ContinuedFraction {
+//    pub fn add(self, other: u64) -> ContinuedFraction {
 //         if(other == 0) { self } else {
 //             match self {
 //                 Whole(w) => Whole(w + other),
@@ -87,7 +140,7 @@ impl NormalizedContinuedFraction {
 // impl ops::Mul<u64> for ContinuedFraction {
 //     type Output = ContinuedFraction;
 //
-//     fn mul(self, other: u64){
+//    pub fn mul(self, other: u64){
 //         match self {
 //             Whole(w) => Whole(w * other),
 //             NormalizedFraction(f) => Fraction(other, f),
@@ -100,7 +153,7 @@ impl NormalizedContinuedFraction {
 // impl ops::Add<ContinuedFraction> for u64 {
 //     type Output = ContinuedFraction;
 //
-//     fn add(self, other: ContinuedFraction) -> ContinuedFraction {
+//    pub fn add(self, other: ContinuedFraction) -> ContinuedFraction {
 //         other + self
 //     }
 // }
