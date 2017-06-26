@@ -1,6 +1,5 @@
 use std::ops;
 use std::iter::Iterator;
-// use self::ContinuedFraction::*;
 
 pub enum NormalizedContinuedFraction {
     Whole(u64),
